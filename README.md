@@ -48,3 +48,25 @@ Error: ENOENT: no such file or directory, scandir '/Users/zhicheng/Sites/try_yar
   path: '/Users/zhicheng/Sites/try_yargs/test/Users/zhicheng/commands'
 }
 ```
+
+The wrong scandir explaination:
+
+```
+                                    |
+                                    |
+                                    |
+                                    |
+                                    |
+                                    |
+                                    |
+/Users/zhicheng/Sites/try_yargs/test|Users/zhicheng/commands
+                  ^                 |       ^
+                  |                 |       |
+                  |                 |       |
+                  |                 |       |
+                  |                 |       |
+                  |                 |       |
+              Caller dir            |    My home
+                                    |
+                                    |
+```
