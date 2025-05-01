@@ -1,72 +1,51 @@
 # Test Yargs next
 
+## Issue description
 
-## Step 1
+The second parameter of yargs.commandDir is an object that contains the configuration for the commands in the directory.
 
-```
-pnpm install
-node index.js --help
-```
+The first parameter of opts.visit is command, this command is not extensible. So if I want to add a global middleware, I must guarantee that the middlewares key exists in the command file.
 
-It works perfectly.
+```js
+export const command = "test1";
+export const desc = "test1";
+export const builder = {};
+export const middlewares = []; // Comment out this line of code will cause errors
 
-## Step 2
-
-Than copy `commands` dir to home directory and change code
-
-```diff
-- yargsObj.commandDir("commands"); // <-- works
-- // yargsObj.commandDir(path.resolve(process.env.HOME, "commands")); // <-- not work
-+ // yargsObj.commandDir("commands"); // <-- works
-+ yargsObj.commandDir(path.resolve(process.env.HOME, "commands")); // <-- not work
+export const handler = function (argv) {
+  console.log("argv", argv);
+  console.log("1 + 1 =", argv.$utils.sum(1, 1));
+};
 ```
 
-run command tool again.
+```js
+const opts = {
+  visit: (command) => {
+    if (!command.middlewares) {
+      // Need command extensible
+      command.middlewares = [];
+    }
 
-```
-node index.js --help
+    // For all commands to have a chance to inject whatever I want to inject.
+    command.middlewares.unshift((argv) => {
+      argv.$command = command;
+      argv.$utils = {
+        sum: (a, b) => a + b,
+      };
+    });
+
+    if (command.middleware) {
+      // Need command extensible
+      command.middlewares.push(command.middleware);
+    }
+
+    return true;
+  },
+};
+
+yargsObj.commandDir("commands", opts);
 ```
 
-It will produce following error:
+## Discussion
 
-```
-node:fs:1584
-  const result = binding.readdir(
-                         ^
-
-Error: ENOENT: no such file or directory, scandir '/Users/zhicheng/Sites/try_yargs/test/Users/zhicheng/commands'
-    at Object.readdirSync (node:fs:1584:26)
-    at CommandInstance.addDirectory (file:///Users/zhicheng/Sites/try_yargs/test/node_modules/.pnpm/yargs@18.0.0-candidate.4/node_modules/yargs/build/lib/command.js:23:33)
-    at YargsInstance.commandDir (file:///Users/zhicheng/Sites/try_yargs/test/node_modules/.pnpm/yargs@18.0.0-candidate.4/node_modules/yargs/build/lib/yargs-factory.js:293:67)
-    at file:///Users/zhicheng/Sites/try_yargs/test/index.js:7:10
-    at ModuleJob.run (node:internal/modules/esm/module_job:271:25)
-    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:578:26)
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:5) {
-  errno: -2,
-  code: 'ENOENT',
-  syscall: 'scandir',
-  path: '/Users/zhicheng/Sites/try_yargs/test/Users/zhicheng/commands'
-}
-```
-
-The wrong scandir explaination:
-
-```
-                                    |
-                                    |
-                                    |
-                                    |
-                                    |
-                                    |
-                                    |
-/Users/zhicheng/Sites/try_yargs/test|Users/zhicheng/commands
-                  ^                 |       ^
-                  |                 |       |
-                  |                 |       |
-                  |                 |       |
-                  |                 |       |
-                  |                 |       |
-              Caller dir            |    My home
-                                    |
-                                    |
-```
+Making the input command parameter in opts.visit extensible would result in cleaner command files and more powerful handler functionality.

@@ -1,9 +1,31 @@
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import path from "node:path";
 const yargsObj = yargs(hideBin(process.argv));
 
-yargsObj.commandDir("commands"); // <-- works
-// yargsObj.commandDir(path.resolve(process.env.HOME, "commands")); // <-- not work
+const opts = {
+  visit: (command) => {
+    if (!command.middlewares) {
+      // Need command extensible
+      command.middlewares = [];
+    }
+
+    // For all commands to have a chance to inject whatever I want to inject.
+    command.middlewares.unshift((argv) => {
+      argv.$command = command;
+      argv.$utils = {
+        sum: (a, b) => a + b,
+      };
+    });
+
+    if (command.middleware) {
+      // Need command extensible
+      command.middlewares.push(command.middleware);
+    }
+
+    return true;
+  },
+};
+
+yargsObj.commandDir("commands", opts);
 
 yargsObj.parse();
